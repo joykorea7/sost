@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="ko" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOST - 주식회사 소스트 | 디지털 사이니지 & 멀티비전 전문</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#ecfeff',
+                            100: '#cffafe',
+                            400: '#22d3ee',
+                            500: '#06b6d4',
+                            600: '#0891b2',
+                            900: '#164e63',
+                            950: '#083344',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Pretendard', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Fonts & Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
+    <!-- React & Babel -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Firebase SDK (For Portfolio DB Integration) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, getDocs, orderBy, query, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyAP9A5A9c2T5weGZqctuiDAOCt2ztqJtMc",
+            authDomain: "sost-portfolio.firebaseapp.com",
+            projectId: "sost-portfolio",
+            storageBucket: "sost-portfolio.firebasestorage.app",
+            messagingSenderId: "108168561697",
+            appId: "1:108168561697:web:43bc1bc833eb4b155b0f60"
+        };
+        const app = initializeApp(firebaseConfig);
+        window.firebaseApp = { db: getFirestore(app), collection, getDocs, orderBy, query, limit };
+    </script>
+
+    <style>
+        body { background-color: #020617; color: #f8fafc; overflow-x: hidden; }
+        .glass-nav { background: rgba(2, 6, 23, 0.7); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .hero-gradient { background: linear-gradient(135deg, rgba(8,145,178,0.15) 0%, rgba(2,6,23,0) 100%); }
+        .project-card:hover .project-overlay { opacity: 1; }
+        .project-card:hover .project-img { transform: scale(1.05); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const Icon = ({ name, size = 20, className = "" }) => {
+            const ref = React.useRef();
+            React.useEffect(() => {
+                if(ref.current) {
+                    ref.current.innerHTML = '';
+                    const i = document.createElement('i');
+                    i.setAttribute('data-lucide', name);
+                    if(className) i.className = className;
+                    i.style.width = size + 'px';
+                    i.style.height = size + 'px';
+                    ref.current.appendChild(i);
+                    lucide.createIcons({ root: ref.current });
+                }
+            }, [name, size, className]);
+            return <span ref={ref} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}></span>;
+        };
+
+        function SostLanding() {
+            const [scrolled, setScrolled] = useState(false);
+            const [projects, setProjects] = useState([]);
+
+            useEffect(() => {
+                AOS.init({ duration: 800, once: true, offset: 50 });
+                lucide.createIcons();
+
+                const handleScroll = () => setScrolled(window.scrollY > 50);
+                window.addEventListener('scroll', handleScroll);
+                return () => window.removeEventListener('scroll', handleScroll);
+            }, []);
+
+            // Firebase 연동 (라이브 서버 데이터 호출)
+            useEffect(() => {
+                async function fetchPortfolio() {
+                    if(!window.firebaseApp) return;
+                    const { db, collection, getDocs, orderBy, query, limit } = window.firebaseApp;
+                    try {
+                        const q = query(collection(db, "portfolio"), orderBy("createdAt", "desc"), limit(4));
+                        const snap = await getDocs(q);
+                        const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                        if(data.length > 0) {
+                            setProjects(data);
+                        } else {
+                            // 등록된 데이터가 없을 경우 나오는 안내 데모 이미지
+                            setProjects([
+                                { id: 'demo1', title: '시청 예산과 비디오월 구축', desc: '통합관제센터용 초정밀 멀티비전 디스플레이 설치 및 네트워크 연동', imgUrl: './sost-img06.png' },
+                                { id: 'demo2', title: '구청 스마트 고시공고 전광판', desc: '주야간 완벽 시인성을 자랑하는 옥외형 스마트 안내시스템', imgUrl: './sost-img07.png' },
+                                { id: 'demo3', title: '관공서 로비 웰컴 디스플레이', desc: '청사 홍보 및 민원인 안내를 위한 프리미엄 디지털 사이니지', imgUrl: './sost-img08.png' }
+                            ]);
+                        }
+                    } catch (e) {
+                        console.error('Firebase Error:', e);
+                        setProjects([
+                            { id: 'err', title: '데모 모드', desc: '데이터베이스 연결이 비활성화 되어 기본 화면이 표출됩니다.', imgUrl: './sost-img06.png' }
+                        ]);
+                    }
+                }
+                setTimeout(fetchPortfolio, 300); // SDK 로드 지연 기다림
+            }, []);
+
+            return (
+                <div className="min-h-screen font-sans">
+                    {/* Header */}
+                    <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'glass-nav py-4 shadow-xl' : 'py-6'}`}>
+                        <div className="max-w-7xl mx-auto px-5 flex items-center justify-between">
+                            <div className="text-2xl sm:text-3xl font-black tracking-tighter text-white flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo(0,0)}>
+                                <span className="bg-brand-500 text-slate-950 px-2 py-0.5 rounded uppercase italic">SOST</span>
+                                <span>소스트</span>
+                            </div>
+                            
+                            <nav className="hidden md:flex gap-10 text-[15px] font-bold text-slate-300">
+                                <a href="#about" className="hover:text-brand-400 transition">회사소개</a>
+                                <a href="#service" className="hover:text-brand-400 transition">사업영역</a>
+                                <a href="#products" className="hover:text-brand-400 transition">제품안내</a>
+                                <a href="#portfolio" className="hover:text-brand-400 transition">설치사례 (포토게시판)</a>
+                                <a href="#contact" className="hover:text-brand-400 transition">견적상담</a>
+                            </nav>
+
+                            <a href="tel:010-3210-1777" className="bg-brand-600 hover:bg-brand-500 text-white px-5 py-2.5 rounded-full font-bold text-sm transition-all shadow-lg active:scale-95 flex items-center gap-2">
+                                <Icon name="phone" size={16} /> 전화상담
+                            </a>
+                        </div>
+                    </header>
+
+                    {/* Hero */}
+                    <section className="pt-40 pb-32 px-5 relative hero-gradient min-h-[90vh] flex items-center">
+                        <div className="absolute top-20 right-0 w-[500px] h-[500px] bg-brand-600/10 blur-[150px] rounded-full point-events-none"></div>
+                        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16 items-center flex-1">
+                            <div data-aos="fade-right">
+                                <div className="inline-flex items-center gap-2 text-brand-400 font-black tracking-widest text-sm mb-6 uppercase border border-brand-500/30 px-4 py-2 rounded-full bg-brand-500/10">
+                                    <Icon name="monitor" size={16} /> Digital Display Solutions
+                                </div>
+                                <h1 className="text-5xl sm:text-7xl font-black text-white leading-[1.15] mb-8 tracking-tight break-keep">
+                                    공간의 가치를<br/>
+                                    극대화하는 <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-cyan-300">멀티비전</span>
+                                </h1>
+                                <p className="text-slate-400 text-lg sm:text-xl leading-relaxed mb-12 font-medium break-keep">
+                                    최첨단 LED 디스플레이, 스마트 사이니지, 전자 고시공고 게시대까지.<br/>
+                                    주식회사 소스트(SOST)는 기획부터 설계, 설치, 유지보수까지 최적의 솔루션을 제공합니다.
+                                </p>
+                                <div className="flex flex-wrap gap-4">
+                                    <a href="#portfolio" className="bg-white text-slate-950 px-8 py-4 rounded-full font-black text-lg hover:bg-slate-200 transition-all flex items-center gap-2">
+                                        설치 사례 보기 <Icon name="arrow-right" size={20} />
+                                    </a>
+                                    <a href="https://blog.naver.com/rantiel" target="_blank" className="border border-slate-700 bg-slate-900/50 hover:bg-slate-800 text-white px-8 py-4 rounded-full font-bold text-lg transition-all flex items-center gap-2">
+                                        회사 블로그
+                                    </a>
+                                </div>
+                            </div>
+                            <div className="relative relative-group hidden lg:block" data-aos="fade-left">
+                                <img src="./sost-img01.png" alt="Control Room Multivision" className="rounded-3xl shadow-2xl shadow-brand-500/20 border border-slate-800" />
+                                <div className="absolute -bottom-8 -left-8 bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-2xl flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-brand-500/20 text-brand-400 rounded-full flex items-center justify-center">
+                                        <Icon name="check-circle" size={24} />
+                                    </div>
+                                    <div>
+                                        <p className="text-white font-black text-xl">100+</p>
+                                        <p className="text-slate-400 text-sm font-bold">전국 관공서/기업 설치</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Services */}
+                    <section id="service" className="py-32 px-5 bg-slate-950 border-t border-slate-900 relative">
+                        <div className="max-w-7xl mx-auto">
+                            <div className="text-center mb-20" data-aos="fade-up">
+                                <h2 className="text-4xl font-black text-white mb-6 tracking-tight">주요 사업 영역</h2>
+                                <p className="text-slate-400 text-lg">어떤 차원의 공간이든 완벽한 시각적 커뮤니케이션을 구축합니다.</p>
+                            </div>
+                            
+                            <div className="grid md:grid-cols-3 gap-8">
+                                {[
+                                    {icon: 'monitor-play', title: '멀티비전 (비디오월)', desc: '상황실, 관제센터, 로비 등을 위한 베젤리스 초대형 멀티스크린 구축'},
+                                    {icon: 'cpu', title: '스마트 전자 게시대', desc: '관공서 및 구청용 고시공고 시스템, 고해상도 아웃도어 LED 및 키오스크'},
+                                    {icon: 'cast', title: '디지털 사이니지', desc: '메뉴보드, 사내 공지용 DID, 상업 공간의 투명/커브드 디스플레이 설계'}
+                                ].map((srv, i) => (
+                                    <div key={i} data-aos="fade-up" data-aos-delay={i*100} className="bg-slate-900/50 p-10 rounded-[2rem] border border-slate-800 hover:border-brand-500/50 transition-all group">
+                                        <div className="w-16 h-16 bg-slate-800 text-brand-400 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-brand-500 group-hover:text-white transition-all shadow-lg">
+                                            <Icon name={srv.icon} size={32} />
+                                        </div>
+                                        <h3 className="text-2xl font-black text-white mb-4">{srv.title}</h3>
+                                        <p className="text-slate-400 leading-relaxed font-medium break-keep">{srv.desc}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Products Lineup Section */}
+                    <section id="products" className="py-32 px-5 bg-slate-900 border-t border-slate-800 relative shadow-inner">
+                        <div className="max-w-7xl mx-auto">
+                            <div className="text-center mb-20" data-aos="fade-up">
+                                <h2 className="text-4xl font-black text-white mb-6 tracking-tight">주요 제품 안내</h2>
+                                <p className="text-slate-400 text-lg">최상의 화질과 내구성을 자랑하는 SOST의 독자적인 디스플레이 라인업.</p>
+                            </div>
+                            
+                            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {[
+                                    {img: './sost-img02.png', title: '통합 관제실 비디오월', subtitle: '초슬림 베젤로 경계선 없는 압도적 대형 화면 구축'},
+                                    {img: './sost-img03.png', title: '옥외형 고휘도 전광판', subtitle: '극한의 날씨와 직사광선에도 끄떡없는 아웃도어 LED'},
+                                    {img: './sost-img05.png', title: '공공기관 터치 키오스크', subtitle: '사용자 친화적 UI를 탑재한 맞춤형 민원 안내 시스템'}
+                                ].map((prod, i) => (
+                                    <div key={i} data-aos="fade-up" data-aos-delay={i*100} className="bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden group hover:border-brand-500 transition-colors">
+                                        <div className="h-48 overflow-hidden bg-slate-100 opacity-80 group-hover:opacity-100 transition-opacity">
+                                            <img src={prod.img} alt={prod.title} className="w-full h-full object-cover group-hover:scale-110 transition duration-700" />
+                                        </div>
+                                        <div className="p-6">
+                                            <h4 className="text-xl font-bold text-white mb-2">{prod.title}</h4>
+                                            <p className="text-slate-400 text-sm font-medium">{prod.subtitle}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Portfolio / Photo Board */}
+                    <section id="portfolio" className="py-32 px-5 bg-slate-900 border-t border-slate-800">
+                        <div className="max-w-7xl mx-auto">
+                            <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6" data-aos="fade-up">
+                                <div>
+                                    <div className="text-brand-500 font-black tracking-widest text-sm mb-4 uppercase flex items-center gap-2"><Icon name="camera" size={16}/> Project Gallery</div>
+                                    <h2 className="text-4xl font-black text-white tracking-tight">포토 설치 사례</h2>
+                                    <p className="text-slate-400 mt-4 font-medium">SOST가 완성한 전국 주요 프로젝트 현장을 확인하세요.</p>
+                                </div>
+                                <a href="admin.html" className="hidden md:inline-flex items-center gap-2 text-slate-500 hover:text-white text-sm font-bold bg-slate-950 px-4 py-2 rounded-xl border border-slate-800 transition">
+                                    <Icon name="lock" size={14}/> 관리자 로그인
+                                </a>
+                            </div>
+
+                            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                {projects.slice(0, 4).map((item, i) => (
+                                    <div key={i} className="bg-slate-950 rounded-3xl overflow-hidden border border-slate-800 shadow-xl group hover:border-brand-500 transition-all flex flex-col" data-aos="fade-up" data-aos-delay={i*100}>
+                                        <div className="aspect-[4/3] w-full overflow-hidden bg-slate-900 border-b border-slate-800 relative">
+                                            <img src={item.imgUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition duration-700 ease-out" />
+                                            {/* 마우스오버 전에도 로고가 살짝 보이게 뱃지 배치 */}
+                                            <div className="absolute top-4 right-4 bg-slate-900/90 border border-slate-800 text-brand-400 text-[10px] font-black uppercase px-3 py-1.5 rounded-full backdrop-blur-md shadow-lg flex items-center gap-1.5">
+                                                <Icon name="check-circle" size={12}/> 완료
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="p-6 flex-1 flex flex-col">
+                                            <h3 className="text-xl font-black text-white mb-2 tracking-tight group-hover:text-brand-400 transition-colors">{item.title}</h3>
+                                            <p className="text-slate-400 text-sm font-medium line-clamp-2 leading-relaxed break-keep mt-auto">{item.desc}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            
+                            {/* 포토게시판 더보기 및 관리자 */}
+                            <div className="mt-16 flex flex-col sm:flex-row items-center justify-center gap-4">
+                                <a href="portfolio.html" className="w-full sm:w-auto bg-brand-600 hover:bg-brand-500 text-white font-black px-8 py-4 rounded-full transition shadow-xl active:scale-95 flex items-center justify-center gap-2">
+                                    <Icon name="grid" size={20} /> 더 많은 설치 사례 보기
+                                </a>
+                                <a href="admin.html" className="md:hidden inline-flex items-center gap-2 text-slate-500 text-xs hover:text-white underline mt-4 sm:mt-0">
+                                    게시판 유지보수 (관리자 모드)
+                                </a>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Contact Section */}
+                    <section id="contact" className="py-32 px-5 bg-slate-950 border-t border-slate-900 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-1/2 h-full bg-slate-900/40 rounded-l-[100px] -z-10 hidden lg:block"></div>
+                        <div className="max-w-7xl mx-auto grid lg:grid-cols-2 gap-16">
+                            
+                            <div data-aos="fade-right">
+                                <h2 className="text-4xl sm:text-5xl font-black text-white tracking-tight mb-8 leading-tight">
+                                    디스플레이 솔루션,<br/><span className="text-brand-400">전문가와 상담</span>하세요.
+                                </h2>
+                                <p className="text-slate-400 text-lg mb-12 font-medium break-keep">설치 공간, 목적, 예산에 맞는 최적의 맞춤형 멀티비전과 사이니지를 설계해 드립니다.</p>
+                                
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-6 bg-slate-900 p-6 rounded-3xl border border-slate-800">
+                                        <div className="w-14 h-14 bg-brand-500 text-white rounded-2xl flex items-center justify-center shrink-0"><Icon name="phone" size={28} /></div>
+                                        <div>
+                                            <p className="text-slate-400 text-xs font-black mb-1 tracking-widest uppercase">대표 전화 (터치 시 통화방연결)</p>
+                                            <a href="tel:010-3210-1777" className="text-white text-2xl font-black hover:text-brand-400 transition-colors inline-block">010-3210-1777</a>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-6 bg-slate-900 p-6 rounded-3xl border border-slate-800">
+                                        <div className="w-14 h-14 bg-yellow-400 text-slate-900 rounded-2xl flex items-center justify-center shrink-0"><Icon name="message-circle" size={28} /></div>
+                                        <div>
+                                            <p className="text-slate-400 text-xs font-black mb-1 tracking-widest uppercase">카카오톡 상담</p>
+                                            <p className="text-white text-xl font-bold italic line-through opacity-50 mb-1">채널 개설 예정</p>
+                                            <p className="text-yellow-400 text-sm font-bold">빠른 답변을 원하시면 전화 문의를 이용해주세요.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-900 p-8 sm:p-12 rounded-[2.5xl] border border-slate-800 relative z-10 shadow-2xl" data-aos="fade-left">
+                                <h3 className="text-2xl font-black text-white mb-2">온라인 폼 문의</h3>
+                                <p className="text-slate-400 text-sm mb-8">내용을 남겨주시면 <strong className="text-white">kwon@sost.co.kr</strong> 로 메일이 발송됩니다.</p>
+                                
+                                {/* Formspree 폼 */}
+                                {/* 안내: action 속성에 Formspree 엔드포인트를 넣어야 실제 동작합니다 */}
+                                <form action="https://formspree.io/f/YOUR_FORMSPREE_ID" method="POST" className="space-y-6">
+                                    <div>
+                                        <label className="block text-slate-300 font-bold text-sm mb-2">업체명 / 담당자명</label>
+                                        <input type="text" name="name" required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all font-medium" placeholder="주식회사 소스트 / 홍길동" />
+                                    </div>
+                                    <div className="grid sm:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-slate-300 font-bold text-sm mb-2">연락처</label>
+                                            <input type="text" name="phone" required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-brand-500 transition-all font-medium" placeholder="010-0000-0000" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-slate-300 font-bold text-sm mb-2">이메일 (선택)</label>
+                                            <input type="email" name="email" className="w-full bg-slate-950 border border-slate-800 rounded-xl px-5 py-4 text-white focus:outline-none focus:border-brand-500 transition-all font-medium" placeholder="email@example.com" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-slate-300 font-bold text-sm mb-2">설치 장소 및 문의 내용</label>
+                                        <textarea name="message" required className="w-full bg-slate-950 border border-slate-800 rounded-xl px-5 py-4 text-white h-32 resize-none focus:outline-none focus:border-brand-500 transition-all font-medium" placeholder="어떤 형태의 디스플레이(멀티비전, 키오스크 등)를 원하시는지, 설치 공간의 대략적인 상황을 남겨주시면 빠른 상담이 가능합니다."></textarea>
+                                    </div>
+                                    <button type="submit" className="w-full bg-brand-600 hover:bg-brand-500 text-white font-black text-lg py-5 rounded-2xl transition shadow-xl active:scale-95 flex items-center justify-center gap-2">
+                                        <Icon name="send" size={20} /> 문의 내용 전송하기
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Footer */}
+                    <footer className="bg-slate-950 py-12 px-5 border-t border-slate-900">
+                        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+                            <div className="text-center md:text-left">
+                                <div className="text-xl font-black text-white tracking-widest uppercase flex items-center justify-center md:justify-start gap-2 mb-4">
+                                    <Icon name="monitor" className="text-brand-500" /> SOST
+                                </div>
+                                <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                                    주식회사 소스트<br/>
+                                    대표 이메일 : kwon@sost.co.kr | 대표 전화 : 010-3210-1777<br/>
+                                    네이버 블로그 : <a href="https://blog.naver.com/rantiel" target="_blank" className="hover:text-brand-400 underline">blog.naver.com/rantiel</a>
+                                </p>
+                            </div>
+                            <div className="text-slate-600 text-xs font-bold text-center md:text-right">
+                                &copy; 2026 SOST INC. ALL RIGHTS RESERVED.<br/>
+                                DESIGN & DEVELOPED BY ADOPTER
+                            </div>
+                        </div>
+                    </footer>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<SostLanding />);
+    </script>
+</body>
+</html>
